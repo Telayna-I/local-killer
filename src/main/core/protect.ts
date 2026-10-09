@@ -41,19 +41,33 @@ export const DEFAULT_PROTECTED_NAMES = [
   'claude'
 ]
 
+/**
+ * Entries match process names without extension, case-insensitively. A trailing `*` makes the entry a
+ * prefix: `localkiller helper*` covers Electron's macOS helpers (`LocalKiller Helper (GPU)`...).
+ */
 export class ProtectionPolicy {
-  private readonly names: Set<string>
+  private readonly names = new Set<string>()
+  private readonly prefixes: string[] = []
 
   constructor(
     protectedNames: string[],
     private readonly selfPids: Set<number>
   ) {
-    this.names = new Set(protectedNames.map(baseName))
+    for (const entry of protectedNames.map(baseName)) {
+      if (entry.endsWith('*')) this.prefixes.push(entry.slice(0, -1))
+      else this.names.add(entry)
+    }
   }
 
   isProtected(process: RawProcess): boolean {
-    return (
-      process.isSystem || this.selfPids.has(process.pid) || this.names.has(baseName(process.name))
-    )
+    if (process.isSystem || this.selfPids.has(process.pid)) return true
+    const name = baseName(process.name)
+    return this.names.has(name) || this.prefixes.some((prefix) => name.startsWith(prefix))
   }
+}
+
+/** The app's own executable plus its Electron helpers (separate binaries on macOS). */
+export function selfProtectedNames(executableName: string): string[] {
+  const name = baseName(executableName)
+  return [name, `${name} helper*`]
 }

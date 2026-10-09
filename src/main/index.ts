@@ -3,6 +3,7 @@ import { basename, join } from 'node:path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { IPC } from '../shared/ipc-contract'
 import { KillService } from './core/kill-service'
+import { selfProtectedNames } from './core/protect'
 import { SnapshotService } from './core/snapshot'
 import { DockerService } from './docker/docker'
 import { registerIpc } from './ipc/register'
@@ -12,15 +13,15 @@ import { runSmokeTest } from './smoke'
 import { Updater } from './updater'
 import { createMainWindow } from './window'
 
-if (!app.requestSingleInstanceLock()) app.quit()
+// The smoke test must run even while a normal LocalKiller window is open.
+if (!process.argv.includes('--smoke') && !app.requestSingleInstanceLock()) app.quit()
 
 async function start(): Promise<void> {
   electronApp.setAppUserModelId('com.telayna.localkiller')
   const provider = await getProvider()
   const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'))
-  // Our own executable covers Electron's helper processes (renderer, GPU, utility).
   const snapshots = new SnapshotService(provider, () => settings.get(), {
-    extraProtectedNames: [basename(process.execPath)]
+    extraProtectedNames: selfProtectedNames(basename(process.execPath))
   })
 
   if (process.argv.includes('--smoke')) {

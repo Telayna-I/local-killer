@@ -3,6 +3,7 @@ import { baseName } from './classify'
 const MAX_LABEL_LENGTH = 60
 const JS_RUNTIMES = new Set(['node', 'bun', 'deno'])
 const PYTHON = /^(python[0-9.]*|pythonw|py)$/
+const PHP = /^php[0-9.]*$/
 const NODE_BIN_ALIASES: Record<string, string> = { 'npm-cli.js': 'npm', 'npx-cli.js': 'npx' }
 
 /** Splits a command line; quotes group words and may appear mid-token (`--dir="C:\a b"`). */
@@ -58,13 +59,18 @@ function describePhp(args: string[]): string[] {
 export function describeCommand(name: string, commandLine: string | null): string {
   const runtime = baseName(name)
   if (commandLine === null) return runtime
-  const args = tokenize(commandLine).slice(1)
+  const tokens = tokenize(commandLine)
+  const args = tokens.slice(1)
+  // On Linux/macOS npm and next overwrite argv with a title (`npm run dev`, `next-server (v15)`).
+  const isTitle = tokens.length > 0 && !isPath(tokens[0]) && baseName(tokens[0]) !== runtime
   let parts: string[]
-  if (INLINE_CODE_FLAGS.has(args[0])) {
+  if (JS_RUNTIMES.has(runtime) && isTitle) {
+    parts = tokens
+  } else if (INLINE_CODE_FLAGS.has(args[0])) {
     parts = [runtime, args[0]]
   } else if (JS_RUNTIMES.has(runtime)) {
     parts = describeScript(args)
-  } else if (runtime === 'php') {
+  } else if (PHP.test(runtime)) {
     parts = describePhp(args)
   } else if (PYTHON.test(runtime)) {
     parts = args[0] === '-m' ? args.slice(1, 3) : describeScript(args)

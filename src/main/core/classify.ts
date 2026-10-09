@@ -44,13 +44,19 @@ const SHELLS: Record<string, RegExp> = {
   fish: /\s-[a-z]*c\b/
 }
 
+/** Linux reports the real interpreter binary: `python3.12`, `ruby3.3`, `php8.3`. */
+const VERSIONED_RUNTIME = /^(python|ruby|php)[0-9.]+$/
+
 export function isDevRuntime(process: RawProcess): boolean {
-  return DEV_RUNTIMES.has(baseName(process.name))
+  const name = baseName(process.name)
+  return DEV_RUNTIMES.has(name) || VERSIONED_RUNTIME.test(name)
 }
 
 export function isShell(process: RawProcess): boolean {
   return baseName(process.name) in SHELLS
 }
+
+const STAYS_OPEN = /\s-noexit\b/i
 
 /**
  * Shell running a single command (`cmd /c vite`, `bash -c '...'`): it lives and dies with its
@@ -58,7 +64,10 @@ export function isShell(process: RawProcess): boolean {
  */
 export function isTransientShell(process: RawProcess): boolean {
   const pattern = SHELLS[baseName(process.name)]
-  return pattern !== undefined && process.commandLine !== null && pattern.test(process.commandLine)
+  const command = process.commandLine
+  if (pattern === undefined || command === null || !pattern.test(command)) return false
+  // `-NoExit -Command <init>` (VS Code / Windows Terminal profiles) runs a script, then stays interactive.
+  return !STAYS_OPEN.test(command)
 }
 
 /** Parents that adopt orphans on Unix: an orphan's ppid points at one of these. */

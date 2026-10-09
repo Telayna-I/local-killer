@@ -144,3 +144,23 @@ describe('buildInstances', () => {
     ])
   })
 })
+
+describe('buildInstances with an interactive -NoExit terminal', () => {
+  it('never makes the user terminal the instance root', () => {
+    const terminal = proc({
+      pid: 200,
+      name: 'pwsh.exe',
+      commandLine: 'pwsh -NoExit -Command ". init.ps1"',
+      startTimeMs: 1
+    })
+    const server = proc({ pid: 201, ppid: 200, name: 'node.exe' })
+    const [instance] = build(
+      [terminal, server],
+      [{ pid: 201, port: 5173, address: '::1' }],
+      [[server, { cwd: REPO, env: {} }]]
+    )
+
+    expect(instance.id).toBe(identityKey(server))
+    expect(instance.pids).toEqual([201])
+  })
+})

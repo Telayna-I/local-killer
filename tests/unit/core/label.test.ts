@@ -35,3 +35,20 @@ describe('describeCommand', () => {
     expect(describeCommand('node.exe', null)).toBe('node')
   })
 })
+
+describe('describeCommand with rewritten process titles (Linux/macOS)', () => {
+  it('uses the title npm/next write over argv', () => {
+    expect(describeCommand('node', 'npm run dev')).toBe('npm run dev')
+    expect(describeCommand('node', 'next-server (v15.0.3)')).toBe('next-server (v15.0.3)')
+  })
+
+  it('still parses real node command lines', () => {
+    expect(describeCommand('node', '/usr/bin/node /p/node_modules/vite/bin/vite.js')).toBe('vite')
+    expect(describeCommand('node', 'node server.js')).toBe('server.js')
+  })
+
+  it('handles versioned interpreters', () => {
+    expect(describeCommand('php8.3', 'php8.3 artisan serve')).toBe('artisan serve')
+    expect(describeCommand('python3.12', 'python3 -m uvicorn app:main')).toBe('uvicorn app:main')
+  })
+})
