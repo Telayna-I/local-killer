@@ -74,3 +74,9 @@ metadata and README point there. Everything else in D-006 stands.
 An instance is its launch root plus descendants, but traversal stops at the root of another instance,
 at interactive shells and at protected processes. Supersedes the "merge nested roots into the bigger
 subtree" rule from D-005, which let a listening ancestor hide and co-kill dev servers below it.
+
+## D-015 — macOS x64 is smoke-tested on an Intel runner, not under Rosetta
+The x64 app segfaults without output under Rosetta on GitHub's arm64 macOS VMs while the arm64 app passes.
+That environment says nothing about real Intel Macs, so the release workflow smoke-tests x64 on
+`macos-15-intel`, and publishing waits for it. Builds still happen in one invocation on macos-latest so
+a single `latest-mac.yml` lists both archs. Amends D-010.

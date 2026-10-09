@@ -1,6 +1,7 @@
 # Release: push a tag vX.Y.Z (matching package.json "version") →
 #   draft   creates the draft GitHub release for the tag
 #   build   packages Windows / macOS / Linux, smoke-tests the packaged app, uploads to the draft
+#   smoke-mac-x64  smoke-tests the Intel mac build on a real Intel runner
 #   publish turns the draft into the latest release, which is what electron-updater reads (D-006)
 name: Release
 
@@ -89,12 +90,9 @@ jobs:
         run: |
           npx electron-builder ${{ matrix.platform }} --dir --publish never
           if [ "$RUNNER_OS" = "macOS" ]; then
+            # x64 runs on a real Intel runner (smoke-mac-x64): under Rosetta on the arm64 VM it
+            # segfaults without output, which says nothing about real Intel Macs.
             node build/smoke-packaged.mjs --arch arm64
-            if /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then
-              node build/smoke-packaged.mjs --arch x64
-            else
-              echo "::warning::Rosetta 2 is not available; x64 smoke test skipped"
-            fi
           else
             node build/smoke-packaged.mjs
           fi
@@ -104,8 +102,30 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # The mac build job packages x64 next to arm64 (one latest-mac.yml) but can only run arm64
+  # natively; the Intel build is smoke-tested here before anything is published.
+  smoke-mac-x64:
+    needs: draft
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Packaged smoke test (x64)
+        run: |
+          npx electron-builder --mac --x64 --dir --publish never
+          node build/smoke-packaged.mjs --arch x64
+
   publish:
-    needs: build
+    needs: [build, smoke-mac-x64]
     runs-on: ubuntu-latest
     steps:
       - name: Publish the draft as the latest release
