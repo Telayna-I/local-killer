@@ -8,6 +8,21 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
+/** Prints the failure and, on GitHub Actions, raises it as an annotation (readable without log access). */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- plain .mjs, no types
+function fail(message) {
+  console.error(message)
+  if (process.env.GITHUB_ACTIONS) {
+    const escaped = message
+      .slice(-4000)
+      .replaceAll('%', '%25')
+      .replaceAll('\r', '%0D')
+      .replaceAll('\n', '%0A')
+    console.log(`::error title=Packaged smoke test::${escaped}`)
+  }
+  process.exit(1)
+}
+
 const archIndex = process.argv.indexOf('--arch')
 const arch = archIndex === -1 ? process.arch : process.argv[archIndex + 1]
 const release = join(import.meta.dirname, '..', 'release')
@@ -26,8 +41,7 @@ const binary = {
 }[process.platform]
 
 if (!binary || !existsSync(binary)) {
-  console.error(`Packaged app not found at ${binary}. Run \`electron-builder --dir\` first.`)
-  process.exit(1)
+  fail(`Packaged app not found at ${binary}. Run \`electron-builder --dir\` first.`)
 }
 
 let command = binary
@@ -54,8 +68,14 @@ try {
 console.log(`${binary} --smoke → exit ${result.status ?? result.signal ?? result.error?.message}`)
 if (verdictLine) console.log(verdictLine)
 if (result.status !== 0 || verdict?.ok !== true) {
-  console.error('Packaged smoke test FAILED')
-  if (stdout.trim()) console.error(`stdout:\n${stdout}`)
-  if (result.stderr?.trim()) console.error(`stderr:\n${result.stderr}`)
-  process.exit(1)
+  const outcome = result.status ?? result.signal ?? result.error?.message
+  fail(
+    [
+      `${arch} smoke FAILED (exit ${outcome})`,
+      stdout.trim() && `stdout:\n${stdout.trim()}`,
+      result.stderr?.trim() && `stderr:\n${result.stderr.trim()}`
+    ]
+      .filter(Boolean)
+      .join('\n')
+  )
 }
