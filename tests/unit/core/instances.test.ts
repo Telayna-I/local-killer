@@ -1,0 +1,146 @@
+import { join, resolve } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { buildInstances } from '../../../src/main/core/instances'
+import { ProtectionPolicy } from '../../../src/main/core/protect'
+import { RepoResolver } from '../../../src/main/core/repo-root'
+import { ProcessTree, identityKey } from '../../../src/main/core/tree'
+import type { InstanceView } from '../../../src/shared/types'
+import type { ProcessDetails, RawListener, RawProcess } from '../../../src/main/platform/types'
+import { proc } from '../fixtures'
+
+const REPO = resolve('/work/shop')
+const repos = new RepoResolver((path) => path === join(REPO, '.git'), resolve('/home/me'))
+
+function build(
+  processes: RawProcess[],
+  listeners: RawListener[],
+  details: [RawProcess, ProcessDetails][] = [],
+  protectedNames: string[] = ['claude', 'mysqld']
+): InstanceView[] {
+  return buildInstances({
+    tree: new ProcessTree(processes),
+    listeners,
+    details: new Map(details.map(([p, d]) => [identityKey(p), d])),
+    cpu: new Map(),
+    policy: new ProtectionPolicy(protectedNames, new Set()),
+    repos
+  }).map((r) => r.view)
+}
+
+describe('buildInstances', () => {
+  it('groups `cmd /c npm run dev` and its children into one instance rooted at the cmd', () => {
+    const terminal = proc({ pid: 100, name: 'pwsh.exe', commandLine: 'pwsh', startTimeMs: 1 })
+    const cmd = proc({
+      pid: 2,
+      ppid: 100,
+      name: 'cmd.exe',
+      commandLine: 'cmd.exe /d /s /c "npm run dev"'
+    })
+    const npm = proc({
+      pid: 3,
+      ppid: 2,
+      name: 'node.exe',
+      commandLine: 'node C:\\n\\node_modules\\npm\\bin\\npm-cli.js run dev'
+    })
+    const vite = proc({
+      pid: 4,
+      ppid: 3,
+      name: 'node.exe',
+      commandLine: 'node C:\\p\\node_modules\\vite\\bin\\vite.js'
+    })
+    const [instance] = build(
+      [terminal, cmd, npm, vite],
+      [{ pid: 4, port: 5173, address: '::1' }],
+      [[vite, { cwd: REPO, env: { WT_SESSION: 'x' } }]]
+    )
+
+    expect(instance).toMatchObject({
+      id: identityKey(cmd),
+      kind: 'dev',
+      label: 'vite',
+      repoName: 'shop',
+      origin: 'terminal',
+      isOrphan: false,
+      ports: [5173]
+    })
+    expect(instance.pids).toEqual([4, 3, 2])
+  })
+
+  it('flags a dev server whose terminal is gone as orphan', () => {
+    const vite = proc({ pid: 4, ppid: 99, name: 'node.exe', commandLine: 'node vite.js' })
+    const [instance] = build(
+      [vite],
+      [{ pid: 4, port: 5173, address: '::1' }],
+      [[vite, { cwd: REPO, env: {} }]]
+    )
+
+    expect(instance.isOrphan).toBe(true)
+  })
+
+  it('finds orphan dev processes without ports when they live in a repo', () => {
+    const watcher = proc({ pid: 5, ppid: 99, name: 'node.exe', commandLine: 'node tsc --watch' })
+    const [instance] = build([watcher], [], [[watcher, { cwd: join(REPO, 'src'), env: {} }]])
+
+    expect(instance).toMatchObject({ kind: 'dev', isOrphan: true, ports: [], repoRoot: REPO })
+  })
+
+  it('ignores orphan runtimes outside any repo unless Claude launched them', () => {
+    const helper = proc({ pid: 5, ppid: 99, name: 'node.exe' })
+    const mcp = proc({ pid: 6, ppid: 98, name: 'node.exe' })
+    const instances = build(
+      [helper, mcp],
+      [],
+      [
+        [helper, { cwd: resolve('/opt/app'), env: {} }],
+        [mcp, { cwd: resolve('/tmp'), env: { CLAUDE_CODE_CHILD_SESSION: '1' } }]
+      ]
+    )
+
+    expect(instances.map((i) => i.pids)).toEqual([[6]])
+  })
+
+  it('marks a process as orphan when its Claude session (CLAUDE_PID) is gone', () => {
+    const bash = proc({ pid: 10, name: 'bash.exe', commandLine: 'bash' })
+    const server = proc({ pid: 11, ppid: 10, name: 'node.exe' })
+    const [instance] = build(
+      [bash, server],
+      [{ pid: 11, port: 3000, address: '0.0.0.0' }],
+      [[server, { cwd: REPO, env: { CLAUDE_PID: '777', CLAUDE_CODE_CHILD_SESSION: '1' } }]]
+    )
+
+    expect(instance).toMatchObject({ origin: 'claude-code', isOrphan: true })
+  })
+
+  it('stops climbing at Claude itself and at protected processes', () => {
+    const claude = proc({ pid: 20, name: 'claude.exe' })
+    const shell = proc({
+      pid: 21,
+      ppid: 20,
+      name: 'bash.exe',
+      commandLine: 'bash -c "npm run dev"'
+    })
+    const server = proc({ pid: 22, ppid: 21, name: 'node.exe' })
+    const [instance] = build([claude, shell, server], [{ pid: 22, port: 3000, address: '::' }])
+
+    expect(instance.id).toBe(identityKey(shell))
+    expect(instance.origin).toBe('claude-code')
+    expect(instance.isOrphan).toBe(false)
+  })
+
+  it('reports protected listeners as protected and other apps as other', () => {
+    const mysql = proc({ pid: 30, name: 'mysqld.exe' })
+    const discord = proc({ pid: 31, name: 'Discord.exe' })
+    const instances = build(
+      [mysql, discord],
+      [
+        { pid: 30, port: 3306, address: '0.0.0.0' },
+        { pid: 31, port: 6463, address: '127.0.0.1' }
+      ]
+    )
+
+    expect(instances.map((i) => [i.label, i.kind])).toEqual([
+      ['discord', 'other'],
+      ['mysqld', 'protected']
+    ])
+  })
+})
