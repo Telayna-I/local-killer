@@ -1,7 +1,7 @@
 # LocalKiller — TODO
 
 ## Next steps
-- Create the public GitHub repo `telayna-i/localkiller` (user action, or install `gh`), add the remote, push.
+- Repo created: `Telayna-I/local-killer`. Remote added and pushed.
 - Watch the first CI run on macos-latest / ubuntu-latest (macOS provider is only proven there).
 - Tag v0.1.0, install it on Windows, then tag v0.1.1 and confirm the auto-update.
 

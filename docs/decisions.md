@@ -65,3 +65,7 @@ Kill: SIGTERM leaves-first → wait → SIGKILL, identity re-checked before each
 The developer's global `~/.npmrc` sets `legacy-peer-deps=true`, which produced a lockfile that `npm ci` rejects
 on clean machines (missing peers such as `@testing-library/dom`). The project file pins the default so the
 lockfile stays reproducible in CI regardless of the local machine.
+
+## D-013 — Release repo is `Telayna-I/local-killer` (supersedes the repo name in D-006)
+The user created the public repo as `Telayna-I/local-killer`. Publish config, updater fallback URL, package
+metadata and README point there. Everything else in D-006 stands.

@@ -70,6 +70,6 @@ linux:
 
 publish:
   provider: github
-  owner: telayna-i
-  repo: localkiller
+  owner: Telayna-I
+  repo: local-killer
   releaseType: draft

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/telayna-i/localkiller/releases/latest">Descargar / Download</a> ·
+  <a href="https://github.com/Telayna-I/local-killer/releases/latest">Descargar / Download</a> ·
   <a href="#english">English</a>
 </p>
 
@@ -48,7 +48,7 @@ lo agrupa por repositorio, te dice quién lo lanzó y lo mata entero, sin tocar 
 ## Instalación
 
 Bajá el archivo de tu sistema desde
-[Releases](https://github.com/telayna-i/localkiller/releases/latest):
+[Releases](https://github.com/Telayna-I/local-killer/releases/latest):
 
 | Sistema             | Archivo                                                                         |
 | ------------------- | ------------------------------------------------------------------------------- |
@@ -139,7 +139,7 @@ session is gone, and kills whole process trees safely (own PID-reuse-safe tree, 
 pid + start time verified before every kill). It also frees RAM (orphans + top consumers), handles
 Docker containers, keeps a protected list and speaks Spanish and English.
 
-**Install** from [Releases](https://github.com/telayna-i/localkiller/releases/latest). Builds are
+**Install** from [Releases](https://github.com/Telayna-I/local-killer/releases/latest). Builds are
 unsigned for now:
 
 - **Windows**: per-user installer. SmartScreen → **More info → Run anyway**. Auto-updates on quit.

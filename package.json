@@ -6,10 +6,10 @@
   "main": "./out/main/index.js",
   "author": "telayna-i <telayna98@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/telayna-i/localkiller",
+  "homepage": "https://github.com/Telayna-I/local-killer",
   "repository": {
     "type": "git",
-    "url": "https://github.com/telayna-i/localkiller.git"
+    "url": "https://github.com/Telayna-I/local-killer.git"
   },
   "scripts": {
     "format": "prettier --write .",

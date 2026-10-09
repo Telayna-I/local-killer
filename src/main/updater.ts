@@ -2,7 +2,7 @@ import { app, shell } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { UpdateState } from '../shared/types'
 
-const RELEASES_URL = 'https://github.com/telayna-i/localkiller/releases/latest'
+const RELEASES_URL = 'https://github.com/Telayna-I/local-killer/releases/latest'
 const STARTUP_CHECK_DELAY_MS = 5000
 
 /**
