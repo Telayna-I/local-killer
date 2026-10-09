@@ -12,6 +12,8 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [react(), tailwindcss()],
+    // electron-vite leaves the renderer unminified by default (730 kB vs 285 kB).
+    build: { minify: true }
   }
 })
