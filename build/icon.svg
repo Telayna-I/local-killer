@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- LocalKiller: a terminal prompt (">") whose cursor is a kill mark ("×"). -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c232c"/>
+      <stop offset="1" stop-color="#0b0d10"/>
+    </linearGradient>
+    <linearGradient id="kill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff6159"/>
+      <stop offset="1" stop-color="#e5383b"/>
+    </linearGradient>
+  </defs>
+  <rect x="48" y="48" width="928" height="928" rx="208" fill="url(#tile)"/>
+  <rect x="50" y="50" width="924" height="924" rx="206" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="4"/>
+  <path d="M207 332 L387 512 L207 692" fill="none" stroke="#e8edf2" stroke-width="104" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M557 382 L817 642 M817 382 L557 642" fill="none" stroke="url(#kill)" stroke-width="104" stroke-linecap="round"/>
+</svg>

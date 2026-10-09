@@ -1,43 +1,75 @@
-appId: com.electron.app
-productName: app
+# LocalKiller packaging (electron-builder 26). Reference: https://www.electron.build/configuration
+# Release flow: .github/workflows/release.yml. Auto-update reads the GitHub Releases below (D-006).
+appId: com.telayna.localkiller
+productName: LocalKiller
+copyright: Copyright © 2026 telayna-i
+
 directories:
   buildResources: build
+  output: release
+
+# Whitelist: only the compiled app and its runtime resources go into the asar. Everything else
+# (src/, tests/, scripts/, docs/, tasks/, .github/, configs, coverage, reports) stays out.
+# package.json and the production node_modules are always added by electron-builder.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - out/**/*
+  - resources/**/*
+# The Linux window icon is read from disk. koffi's koffi.node needs no entry: smartUnpack moves
+# native .node files out of the asar automatically.
 asarUnpack:
   - resources/**
+# koffi ships N-API (ABI-stable) prebuilt binaries in @koromix/koffi-<os>-<arch>; nothing to rebuild.
+npmRebuild: false
+
 win:
-  executableName: app
+  target:
+    - target: nsis
+      arch: x64
+# Unsigned for now: SmartScreen warns on first install; NSIS auto-update works without a publisher
+# signature (no publisherName → electron-updater skips signature verification).
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: ${productName}-Setup-${version}.${ext}
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+
 mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip # zip + latest-mac.yml are what electron-updater reads on macOS
+      arch: [x64, arm64]
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+  category: public.app-category.developer-tools
+  # No Apple Developer ID yet: ad-hoc signature so arm64 builds launch (Apple Silicon refuses
+  # unsigned code and reports modified Electron bundles as "damaged"). Hardened runtime is only
+  # needed for notarization and, with an ad-hoc identity (no Team ID), its library validation would
+  # reject Electron Framework and koffi.node, so it stays off until there is a real identity.
+  identity: '-'
+  hardenedRuntime: false
   notarize: false
-dmg:
-  artifactName: ${name}-${version}.${ext}
+
 linux:
   target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
-  category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
+    - target: AppImage
+      arch: x64
+    - target: deb
+      arch: x64
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  category: Development
+  maintainer: telayna-i <telayna98@gmail.com>
+  synopsis: Find and kill the localhost dev servers you forgot running
+  description: >-
+    Lists everything listening on localhost grouped by repo, shows who launched it (terminal,
+    IDE, Claude Code) and what it consumes, detects orphans and kills whole process trees safely.
+
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: telayna-i
+  repo: localkiller
+  releaseType: draft

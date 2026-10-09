@@ -1,0 +1,114 @@
+# Release: push a tag vX.Y.Z (matching package.json "version") →
+#   draft   creates the draft GitHub release for the tag
+#   build   packages Windows / macOS / Linux, smoke-tests the packaged app, uploads to the draft
+#   publish turns the draft into the latest release, which is what electron-updater reads (D-006)
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Tag must match package.json version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      # Created once here so the three build jobs upload to the same draft instead of racing to
+      # create one each. Re-runs reuse it.
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+              --title "LocalKiller $GITHUB_REF_NAME" --generate-notes
+
+  build:
+    needs: draft
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: --win
+          - os: macos-latest
+            # Both archs in one invocation so a single latest-mac.yml lists x64 and arm64.
+            platform: --mac --x64 --arm64
+          - os: ubuntu-latest
+            platform: --linux
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # npm only installs the koffi binary for the runner's own CPU. Each mac build needs its own
+      # (koffi loads node_modules/@koromix/koffi-<platform>-<arch> at runtime), so add both.
+      - name: Add both macOS koffi binaries
+        if: runner.os == 'macOS'
+        run: |
+          version=$(node -p "require('./node_modules/koffi/package.json').version")
+          npm install --no-save --force --ignore-scripts \
+            "@koromix/koffi-darwin-x64@$version" "@koromix/koffi-darwin-arm64@$version"
+          ls node_modules/@koromix
+
+      - run: npm run build
+
+      - name: Install Xvfb
+        if: runner.os == 'Linux'
+        run: command -v xvfb-run || (sudo apt-get update && sudo apt-get install -y xvfb)
+
+      # Packages the unpacked app (electron-builder downloads its own Electron) and runs it with
+      # --smoke: proves the packaged build loads its native layer and takes a snapshot.
+      - name: Packaged smoke test
+        run: |
+          npx electron-builder ${{ matrix.platform }} --dir --publish never
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            node build/smoke-packaged.mjs --arch arm64
+            if /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then
+              node build/smoke-packaged.mjs --arch x64
+            else
+              echo "::warning::Rosetta 2 is not available; x64 smoke test skipped"
+            fi
+          else
+            node build/smoke-packaged.mjs
+          fi
+
+      - name: Build and upload to the draft release
+        run: npx electron-builder ${{ matrix.platform }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the draft as the latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
