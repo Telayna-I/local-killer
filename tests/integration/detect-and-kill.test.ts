@@ -101,9 +101,14 @@ describe('detect and kill on the real OS', () => {
   })
 
   it('finds the listening server with its repo, port and Claude Code origin, then kills it', async () => {
+    // Matched by pid: on GitHub's Windows runner a system process reports the same port number on
+    // another address, so "first instance with this port" can be someone else.
     const instance = await waitFor(async () =>
-      (await snapshots.take()).instances.find((i: InstanceView) => i.ports.includes(port))
+      (await snapshots.take()).instances.find(
+        (i: InstanceView) => server.pid !== undefined && i.pids.includes(server.pid)
+      )
     )
+    expect(instance.ports).toContain(port)
     expect(instance, await describeProcesses([server.pid, process.pid])).toMatchObject({
       kind: 'dev',
       origin: 'claude-code',
