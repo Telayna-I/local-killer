@@ -12,6 +12,10 @@ async function loadProvider(): Promise<ProcessProvider> {
   switch (process.platform) {
     case 'win32':
       return (await import('./win32')).win32Provider
+    case 'darwin':
+      return (await import('./darwin')).darwinProvider
+    case 'linux':
+      return (await import('./linux')).linuxProvider
     default:
       throw new Error(`Unsupported platform: ${process.platform}`)
   }
