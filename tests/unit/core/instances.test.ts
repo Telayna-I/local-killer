@@ -164,3 +164,48 @@ describe('buildInstances with an interactive -NoExit terminal', () => {
     expect(instance.pids).toEqual([201])
   })
 })
+
+describe('buildInstances with a listening ancestor', () => {
+  const service = proc({ pid: 300, name: 'agent.exe', startTimeMs: 1 })
+  const ide = proc({ pid: 400, name: 'Code.exe', startTimeMs: 1 })
+
+  it('does not let a protected listener swallow the dev servers below it', () => {
+    const runner = proc({ pid: 301, ppid: 300, name: 'Runner.Worker.exe', startTimeMs: 2 })
+    const server = proc({ pid: 302, ppid: 301, name: 'node.exe', startTimeMs: 3 })
+    const instances = build(
+      [service, runner, server],
+      [
+        { pid: 300, port: 7000, address: '0.0.0.0' },
+        { pid: 302, port: 5173, address: '::' }
+      ],
+      [[server, { cwd: REPO, env: {} }]],
+      ['agent']
+    )
+
+    const dev = instances.find((i) => i.pids.includes(302))
+    expect(dev).toMatchObject({ kind: 'dev', id: identityKey(server), ports: [5173] })
+    expect(instances.find((i) => i.kind === 'protected')?.pids).not.toContain(302)
+  })
+
+  it('keeps a terminal opened inside an IDE out of the IDE instance', () => {
+    const terminal = proc({
+      pid: 401,
+      ppid: 400,
+      name: 'pwsh.exe',
+      commandLine: 'pwsh',
+      startTimeMs: 2
+    })
+    const server = proc({ pid: 402, ppid: 401, name: 'node.exe', startTimeMs: 3 })
+    const instances = build(
+      [ide, terminal, server],
+      [
+        { pid: 400, port: 9229, address: '127.0.0.1' },
+        { pid: 402, port: 3000, address: '::' }
+      ],
+      [[server, { cwd: REPO, env: {} }]]
+    )
+
+    expect(instances.find((i) => i.id === identityKey(ide))?.pids).toEqual([400])
+    expect(instances.find((i) => i.id === identityKey(server))?.pids).toEqual([402])
+  })
+})

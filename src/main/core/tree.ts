@@ -48,14 +48,20 @@ export class ProcessTree {
     return ancestors
   }
 
-  /** The process and all its descendants, leaves first (kill order). */
-  subtreeLeavesFirst(root: RawProcess): RawProcess[] {
+  /**
+   * The process and its descendants, leaves first (kill order). Children for which `stopAt` returns
+   * true are left out together with everything below them.
+   */
+  subtreeLeavesFirst(
+    root: RawProcess,
+    stopAt: (p: RawProcess) => boolean = () => false
+  ): RawProcess[] {
     const ordered: RawProcess[] = []
     const visited = new Set<number>()
     const visit = (process: RawProcess): void => {
       if (visited.has(process.pid)) return
       visited.add(process.pid)
-      for (const child of this.childrenOf(process)) visit(child)
+      for (const child of this.childrenOf(process)) if (!stopAt(child)) visit(child)
       ordered.push(process)
     }
     visit(root)

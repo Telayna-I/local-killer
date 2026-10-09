@@ -2,13 +2,14 @@ import type { KillFailure, KillResult } from '../../shared/types'
 import type { ProcessIdentity, ProcessProvider, RawProcess } from '../platform/types'
 import type { ProtectionPolicy } from './protect'
 import type { SnapshotService } from './snapshot'
-import { ProcessTree } from './tree'
+import { instanceMembers } from './members'
+import { ProcessTree, identityKey } from './tree'
 
 const pidFromId = (id: string): number => Number.parseInt(id, 10) || 0
 
 /**
  * Every kill re-reads the process list: ids must come from the last snapshot, the root must still
- * be the same process (pid + start time) and protected processes inside the tree are skipped.
+ * be the same process (pid + start time) and members are recomputed with the snapshot boundaries.
  */
 export class KillService {
   constructor(
@@ -35,12 +36,20 @@ export class KillService {
         failed.push({ pid: record.root.pid, reason: 'not-found' })
         continue
       }
-      for (const process of tree.subtreeLeavesFirst(root)) {
-        if (policy.isProtected(process)) failed.push({ pid: process.pid, reason: 'protected' })
-        else targets.push(process)
+      if (policy.isProtected(root)) {
+        failed.push({ pid: root.pid, reason: 'protected' })
+        continue
       }
+      // Same boundaries as the snapshot, on the fresh tree: new children are included, but other
+      // instances, interactive terminals and protected processes below the root are left alone.
+      targets.push(...instanceMembers(root, tree, this.otherRootKeys(id), policy))
     }
     return this.terminate(targets, false, failed)
+  }
+
+  private otherRootKeys(id: string): Set<string> {
+    const roots = [...this.snapshots.lastIndex.instances.values()].map((r) => identityKey(r.root))
+    return new Set(roots.filter((key) => key !== id))
   }
 
   async closeApps(ids: string[]): Promise<KillResult> {

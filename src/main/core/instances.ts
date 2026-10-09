@@ -3,6 +3,7 @@ import type { ProcessDetails, ProcessIdentity, RawListener, RawProcess } from '.
 import { baseName, isDevRuntime } from './classify'
 import { describeCommand, tokenize } from './label'
 import { findLaunchRoot, hasLostParent } from './launch-root'
+import { instanceMembers } from './members'
 import { claudeSessionPid, detectOrigin } from './origin'
 import type { ProtectionPolicy } from './protect'
 import { directoryFromCommandLine, type RepoResolver } from './repo-root'
@@ -62,11 +63,11 @@ function findSeeds(input: InstanceInput, ports: Map<number, Set<number>>): RawPr
 function buildRecord(
   root: RawProcess,
   seed: RawProcess,
+  subtree: RawProcess[],
   input: InstanceInput,
   ports: Map<number, Set<number>>
 ): InstanceRecord | null {
   const { tree, policy } = input
-  const subtree = tree.subtreeLeavesFirst(root)
   const details =
     input.details.get(identityKey(seed)) ?? input.details.get(identityKey(root)) ?? null
   const cwd = details?.cwd ?? directoryFromCommandLine(tokenize(seed.commandLine ?? ''))
@@ -117,19 +118,13 @@ export function buildInstances(input: InstanceInput): InstanceRecord[] {
     }
   }
 
-  // Bigger subtrees first so a root nested inside another instance is merged into it.
-  const roots = [...seedByRoot.values()].sort(
-    (a, b) =>
-      input.tree.subtreeLeavesFirst(b.root).length - input.tree.subtreeLeavesFirst(a.root).length
-  )
-  const covered = new Set<number>()
+  const rootKeys = new Set(seedByRoot.keys())
   const records: InstanceRecord[] = []
-  for (const { root, seed } of roots) {
-    if (covered.has(root.pid)) continue
-    const record = buildRecord(root, seed, input, ports)
-    if (record === null) continue
-    record.view.pids.forEach((pid) => covered.add(pid))
-    records.push(record)
+  for (const [key, { root, seed }] of seedByRoot) {
+    const otherRoots = new Set([...rootKeys].filter((other) => other !== key))
+    const members = instanceMembers(root, input.tree, otherRoots, input.policy)
+    const record = buildRecord(root, seed, members, input, ports)
+    if (record !== null) records.push(record)
   }
   return records.sort(
     (a, b) =>

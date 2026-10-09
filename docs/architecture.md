@@ -33,6 +33,7 @@ renderer (React, sandboxed)  ──window.api (preload, contextBridge)──▶ 
 | `src/main/core/repo-root.ts` | cwd → nearest `.git` (else manifest), cached |
 | `src/main/core/label.ts` | Human label from the command line (`vite`, `npm run dev`, `artisan serve`) |
 | `src/main/core/instances.ts` | Seeds (listeners + lost dev runtimes) → instances with ports, pids, RAM, CPU |
+| `src/main/core/members.ts` | Instance membership: subtree bounded by other roots, interactive shells, protected processes |
 | `src/main/core/consumers.ts` | Top RAM consumers aggregated by app |
 | `src/main/core/snapshot.ts` | Orchestrates a poll; caches cwd/env per pid+start; keeps the id index |
 | `src/main/core/kill-service.ts` | Re-validates ids, identity and protection on a fresh tree, then terminates |

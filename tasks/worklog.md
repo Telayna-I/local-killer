@@ -47,3 +47,12 @@
   `isSystem` meant "session 0", so the test's own server was classified as protected. `isSystem` now
   means "a different session than LocalKiller's" — identical on desktops, correct on CI/servers.
 - Added `.gitattributes` (`eol=lf`) after a CRLF file triggered prettier warnings on the Windows runner.
+
+## 2026-10-09 — Instance boundaries (bug found by the Windows CI runner)
+- With pid-based lookup the CI diagnostics showed the test server inside a *protected* instance rooted at
+  a listening ancestor (the runner's agent). Real product bug: any listening ancestor (an IDE, a service,
+  a Claude session if it opened a port) swallowed every dev server below it — hidden, and dragged into
+  its kill. Instances now stop at other instance roots, interactive shells and protected processes
+  (`core/members.ts`); KillService recomputes members with the same boundaries on the fresh tree.
+- Live check on the dev machine: 4 Claude-launched servers (next :3000/:3001, vite :5173/:4319) now
+  show as ORPHAN after their sessions closed.

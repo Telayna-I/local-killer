@@ -69,3 +69,8 @@ lockfile stays reproducible in CI regardless of the local machine.
 ## D-013 — Release repo is `Telayna-I/local-killer` (supersedes the repo name in D-006)
 The user created the public repo as `Telayna-I/local-killer`. Publish config, updater fallback URL, package
 metadata and README point there. Everything else in D-006 stands.
+
+## D-014 — Instance members stop at other roots, interactive shells and protected processes
+An instance is its launch root plus descendants, but traversal stops at the root of another instance,
+at interactive shells and at protected processes. Supersedes the "merge nested roots into the bigger
+subtree" rule from D-005, which let a listening ancestor hide and co-kill dev servers below it.

@@ -30,7 +30,7 @@ function fakeProvider(
 const settings = { language: null, pollIntervalMs: 3000, protectedNames: ['mysqld'] }
 
 describe('KillService', () => {
-  it('kills the whole instance tree leaves first but skips protected members', async () => {
+  it('kills the instance tree leaves first and leaves protected children alone', async () => {
     const self = proc({ pid: 1, name: 'electron.exe' })
     const shell = proc({ pid: 2, ppid: 99, name: 'bash.exe', commandLine: 'bash -c dev' })
     const server = proc({ pid: 3, ppid: 2, name: 'node.exe' })
@@ -46,7 +46,7 @@ describe('KillService', () => {
 
     expect(terminated[0].map((t) => t.pid)).toEqual([3, 2])
     expect(result.killed).toEqual([3, 2])
-    expect(result.failed).toEqual([{ pid: 4, reason: 'protected' }])
+    expect(result.failed).toEqual([])
   })
 
   it('refuses ids the last snapshot never issued', async () => {
@@ -81,5 +81,26 @@ describe('CpuTracker', () => {
     const percents = tracker.sample([{ ...node, cpuTimeMs: 3000 }], 11_000)
 
     expect(percents.get(`1-${node.startTimeMs}`)).toBe(50)
+  })
+})
+
+describe('KillService boundaries', () => {
+  it('killing an app instance never reaches a dev server instance nested below it', async () => {
+    const app = proc({ pid: 50, ppid: 99, name: 'Tool.exe', startTimeMs: 1 })
+    const helper = proc({ pid: 51, ppid: 50, name: 'Tool.exe', startTimeMs: 2 })
+    const server = proc({ pid: 52, ppid: 51, name: 'node.exe', startTimeMs: 3 })
+    const { provider, terminated } = fakeProvider(
+      [app, helper, server],
+      [
+        { pid: 50, port: 7000, address: '::' },
+        { pid: 52, port: 3000, address: '::' }
+      ]
+    )
+    const snapshots = new SnapshotService(provider, () => settings, { selfPid: 1 })
+    await snapshots.take()
+
+    await new KillService(provider, snapshots).killInstances(['50-1'])
+
+    expect(terminated[0].map((t) => t.pid)).toEqual([51, 50])
   })
 })
