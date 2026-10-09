@@ -39,3 +39,11 @@
 - Renderer tests migrated from a hand-written DOM harness to React Testing Library (peer now installed).
 - Verified: typecheck, eslint (0 errors), 137 unit, 2 integration (real OS), Playwright E2E (kills a
   spawned server through the UI), `npm run release:check` (packaged exe `--smoke` → ok:true).
+
+## 2026-10-09 — First CI run: macOS + Linux green, Windows session bug fixed
+- Pushed to `Telayna-I/local-killer` (D-013). macos-latest and ubuntu-latest passed everything, including
+  the real integration tests — first proof of the macOS provider.
+- windows-latest failed the integration test: the runner executes everything in session 0, and
+  `isSystem` meant "session 0", so the test's own server was classified as protected. `isSystem` now
+  means "a different session than LocalKiller's" — identical on desktops, correct on CI/servers.
+- Added `.gitattributes` (`eol=lf`) after a CRLF file triggered prettier warnings on the Windows runner.

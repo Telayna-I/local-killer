@@ -10,7 +10,7 @@ export interface RawProcess {
   memoryBytes: number | null
   commandLine: string | null
   executablePath: string | null
-  /** Windows service (session 0) or a process owned by another user. */
+  /** Runs in another Windows session than LocalKiller (services, other users) or under another uid. */
   isSystem: boolean
 }
 

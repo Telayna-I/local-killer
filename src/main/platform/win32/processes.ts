@@ -100,10 +100,20 @@ function readCommandLine(handle: Handle): string | null {
   return buffer.toString('utf16le', UNICODE_STRING_HEADER_SIZE, UNICODE_STRING_HEADER_SIZE + length)
 }
 
-function isServiceSession(pid: number): boolean {
+function sessionOf(pid: number): number | null {
   const session = [0]
-  // Unreadable session means a protected system process.
-  return !ProcessIdToSessionId(pid, session) || session[0] === 0
+  return ProcessIdToSessionId(pid, session) ? session[0] : null
+}
+
+const ownSession = sessionOf(process.pid)
+
+/**
+ * Services and other users' logons live in another session than ours. Comparing against our own
+ * session (not against 0) keeps this right when LocalKiller itself runs in session 0 (CI, servers).
+ */
+function isOtherSession(pid: number): boolean {
+  const session = sessionOf(pid)
+  return session === null || session !== ownSession
 }
 
 export function listProcesses(): RawProcess[] {
@@ -129,7 +139,7 @@ export function listProcesses(): RawProcess[] {
       memoryBytes: info?.memoryBytes ?? null,
       commandLine: info?.commandLine ?? null,
       executablePath: null,
-      isSystem: isServiceSession(entry.pid)
+      isSystem: isOtherSession(entry.pid)
     }
   })
   for (const key of commandLineCache.keys()) if (!seen.has(key)) commandLineCache.delete(key)
