@@ -47,7 +47,7 @@ renderer (React, sandboxed)  ──window.api (preload, contextBridge)──▶ 
 | `src/renderer/src/feedback/*` | Native `<dialog>` confirmations and toasts |
 | `build/smoke-packaged.mjs` | Runs the unpacked app with `--smoke` for the current OS/arch (local + CI) |
 | `.github/workflows/test.yml` | Typecheck, lint, unit, real integration tests on windows/macos/ubuntu |
-| `.github/workflows/release.yml` | On `v*` tag: draft → build + packaged smoke per OS → publish as Latest |
+| `.github/workflows/release.yml` | On `v*` tag: draft → build + packaged smoke per OS (mac x64 on an Intel runner) → publish as Latest |
 
 ## Data flow of one poll
 1. Provider lists processes (pid, ppid, name, start time, CPU time, RAM, cmdline) and TCP listeners.

@@ -56,3 +56,12 @@
   (`core/members.ts`); KillService recomputes members with the same boundaries on the fresh tree.
 - Live check on the dev machine: 4 Claude-launched servers (next :3000/:3001, vite :5173/:4319) now
   show as ORPHAN after their sessions closed.
+
+## 2026-10-09 — v0.1.0 released
+- Release workflow green on all jobs; v0.1.0 published as Latest:
+  https://github.com/Telayna-I/local-killer/releases/tag/v0.1.0
+  (NSIS exe, mac dmg/zip x64 + arm64, AppImage, deb, latest*.yml for electron-updater).
+- macOS x64 under Rosetta on the arm64 runner segfaulted with no output while arm64 passed; the same x64
+  build passed on a real Intel runner (`macos-15-intel`), so x64 is smoke-tested there now (D-015).
+- CI diagnosability: integration assertions carry raw process diagnostics; the packaged smoke script
+  raises failures as GitHub annotations (readable through the public API without log access).

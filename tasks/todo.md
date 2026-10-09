@@ -1,9 +1,8 @@
 # LocalKiller — TODO
 
 ## Next steps
-- Repo created: `Telayna-I/local-killer`. Remote added and pushed.
-- Watch the first CI run on macos-latest / ubuntu-latest (macOS provider is only proven there).
-- Tag v0.1.0, install it on Windows, then tag v0.1.1 and confirm the auto-update.
+- User installs v0.1.0 on Windows; then bump to 0.1.1, tag, and confirm the in-app update banner + restart.
+- Optional later: Apple Developer ID signing to enable silent macOS updates.
 
 ## M0 — Bootstrap
 - [x] Scaffold electron-vite react-ts, git init with telayna-i identity
@@ -31,7 +30,7 @@
 ## M4 — macOS + Linux providers
 - [x] darwin: ps/lsof/libproc/sysctl KERN_PROCARGS2 (unverified until macos-latest CI)
 - [x] linux: /proc (verified in a node:24 container)
-- [ ] Integration matrix green on 3 OSes (needs the GitHub repo)
+- [x] Integration matrix green on 3 OSes
 
 ## M5 — Panels
 - [x] Backend: kill orphans (killInstances) + top consumers (closeApps), Docker service
@@ -40,4 +39,5 @@
 ## M6 — Release
 - [x] electron-builder targets + release workflow (Windows installer built locally)
 - [x] Updater (mac: manual download link)
-- [ ] Ship v0.1.0 → v0.1.1, confirm Windows auto-update (needs the GitHub repo)
+- [x] Ship v0.1.0 (all OS packages smoke-tested in CI)
+- [ ] Ship v0.1.1 and confirm an installed v0.1.0 auto-updates on Windows
