@@ -22,7 +22,10 @@ renderer (React, sandboxed)  ──window.api (preload, contextBridge)──▶ 
 | `src/shared/types.ts`, `ipc-contract.ts` | View types and the typed IPC API shared by main, preload, renderer |
 | `src/main/platform/types.ts` | `ProcessProvider` contract: processes, listeners, details (cwd/env), terminate |
 | `src/main/platform/win32/*` | koffi FFI: Toolhelp32, GetProcessTimes, NtQueryInformationProcess, PEB reads, GetExtendedTcpTable, TerminateProcess |
-| `src/main/platform/parse/*` | Pure parsers (TCP tables, environment blocks), unit tested on every OS |
+| `src/main/platform/darwin/*` | `ps` (LC_ALL=C, TZ=UTC) + `lsof` for listeners; koffi on libSystem: `proc_pidpath`, `proc_pidinfo` (cwd), `sysctl KERN_PROCARGS2` (argv/env); ps/lsof fallback |
+| `src/main/platform/linux/*` | Pure `/proc`: stat/statm/cmdline/exe, `/proc/net/tcp{,6}` + socket inode → pid, cwd/environ |
+| `src/main/platform/unix/kill.ts` | SIGTERM leaves-first → wait → SIGKILL survivors, identity re-checked before every signal |
+| `src/main/platform/parse/*` | Pure parsers (Windows TCP tables, env blocks, procfs, ps/lsof output, argv), unit tested on every OS |
 | `src/main/core/tree.ts` | PID-reuse-safe process tree (parent must start before child) |
 | `src/main/core/classify.ts` | Dev runtimes, shells, one-shot shells, init-like parents |
 | `src/main/core/launch-root.ts` | Climbs wrappers to the instance root; orphan test |
@@ -37,6 +40,13 @@ renderer (React, sandboxed)  ──window.api (preload, contextBridge)──▶ 
 | `src/main/settings/settings.ts` | Validated, atomically written settings |
 | `src/main/updater.ts` | electron-updater; macOS (unsigned) gets a manual download link |
 | `src/main/smoke.ts` | `--smoke`: packaged build self-test (loads the native layer, takes a snapshot) |
+| `src/renderer/src/features/*` | Tabs: projects (grouped by repo), free-ram (orphans + top consumers), docker, settings |
+| `src/renderer/src/hooks/*` | `usePolling` (visible-only, non-overlapping), snapshot/docker/settings/update hooks, kill flow |
+| `src/renderer/src/i18n/*` | Typed `es`/`en` dictionaries, `useT()` with interpolation and plurals |
+| `src/renderer/src/feedback/*` | Native `<dialog>` confirmations and toasts |
+| `build/smoke-packaged.mjs` | Runs the unpacked app with `--smoke` for the current OS/arch (local + CI) |
+| `.github/workflows/test.yml` | Typecheck, lint, unit, real integration tests on windows/macos/ubuntu |
+| `.github/workflows/release.yml` | On `v*` tag: draft → build + packaged smoke per OS → publish as Latest |
 
 ## Data flow of one poll
 1. Provider lists processes (pid, ppid, name, start time, CPU time, RAM, cmdline) and TCP listeners.
@@ -48,4 +58,6 @@ renderer (React, sandboxed)  ──window.api (preload, contextBridge)──▶ 
 ## Testing
 - `npm test`: unit tests (fixtures, any OS).
 - `npm run test:integration`: spawns real servers/orphans in a temp git repo, detects and kills them.
+- `npm run test:e2e`: builds, launches the real app with Playwright, kills a spawned server through the UI.
+- `npm run release:check`: packages for this OS and runs the packaged smoke test.
 - `npm run scan`: prints what the app would show on this machine.

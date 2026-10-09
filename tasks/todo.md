@@ -1,40 +1,43 @@
 # LocalKiller — TODO
 
 ## Next steps
-- M0 in progress: scaffold + tooling + project memory.
+- Create the public GitHub repo `telayna-i/localkiller` (user action, or install `gh`), add the remote, push.
+- Watch the first CI run on macos-latest / ubuntu-latest (macOS provider is only proven there).
+- Tag v0.1.0, install it on Windows, then tag v0.1.1 and confirm the auto-update.
 
 ## M0 — Bootstrap
-- [ ] Scaffold electron-vite react-ts, git init with telayna-i identity
-- [ ] Bump deps (Electron 44, Vite 7.3, TS 5.9), add koffi, electron-updater, Tailwind v4, Vitest, Playwright
-- [ ] Sandbox on, CSP, typed preload API
-- [ ] Project memory: tasks/*, docs/decisions.md, docs/architecture.md
-- [ ] CI test workflow (win/mac/linux)
+- [x] Scaffold electron-vite react-ts, git init with telayna-i identity
+- [x] Bump deps (Electron 44, Vite 7.3, TS 5.9), add koffi, electron-updater, Tailwind v4, Vitest, Playwright
+- [x] Sandbox on, CSP, typed preload API
+- [x] Project memory: tasks/*, docs/decisions.md, docs/architecture.md
+- [x] CI test workflow (win/mac/linux) (runs on first push)
 
 ## M1 — Windows provider
-- [ ] koffi bindings: Toolhelp32, process times/memory, cmdline, PEB cwd/env, TCP listeners
-- [ ] `npm run scan` JSON dump
-- [ ] Packaged smoke run proves koffi loads from asar
+- [x] koffi bindings: Toolhelp32, process times/memory, cmdline, PEB cwd/env, TCP listeners
+- [x] `npm run scan`
+- [x] `--smoke` passes under Electron 44 (unpackaged)
+- [x] Packaged smoke run proves koffi loads from the packaged app (Windows)
 
 ## M2 — Core logic
-- [ ] tree (PID reuse safe), orphans, classify, launch-root, repo-root, origin, label, protect, cpu, snapshot
-- [ ] kill-service with identity validation
-- [ ] Unit tests + real integration test green on Windows
+- [x] tree (PID reuse safe), orphans, classify, launch-root, repo-root, origin, label, protect, cpu, snapshot
+- [x] kill-service with identity validation
+- [x] Unit tests + real integration test green on Windows
 
 ## M3 — UI
-- [ ] Instance list grouped by repo, kill flow, confirm dialog, settings (protected list, language, interval)
-- [ ] i18n es/en
-- [ ] Playwright E2E happy path
+- [x] Instance list grouped by repo, kill flow, confirm dialog, settings (protected list, language, interval)
+- [x] i18n es/en
+- [x] Playwright E2E happy path
 
 ## M4 — macOS + Linux providers
-- [ ] darwin: ps/lsof/sysctl KERN_PROCARGS2
-- [ ] linux: /proc
-- [ ] Integration matrix green on 3 OSes
+- [x] darwin: ps/lsof/libproc/sysctl KERN_PROCARGS2 (unverified until macos-latest CI)
+- [x] linux: /proc (verified in a node:24 container)
+- [ ] Integration matrix green on 3 OSes (needs the GitHub repo)
 
 ## M5 — Panels
-- [ ] Free RAM: kill orphans + top consumers by app
-- [ ] Docker containers + stop
+- [x] Backend: kill orphans (killInstances) + top consumers (closeApps), Docker service
+- [x] UI panels
 
 ## M6 — Release
-- [ ] electron-builder targets + release workflow
-- [ ] Updater UI (mac: manual download)
-- [ ] Ship v0.1.0 → v0.1.1, confirm Windows auto-update
+- [x] electron-builder targets + release workflow (Windows installer built locally)
+- [x] Updater (mac: manual download link)
+- [ ] Ship v0.1.0 → v0.1.1, confirm Windows auto-update (needs the GitHub repo)

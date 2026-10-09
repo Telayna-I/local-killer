@@ -13,3 +13,29 @@
   orphaned watcher without port detected and killed) green on Windows.
 - Live finding on the dev machine: a `vite preview` on :4319 left by another Claude session and a
   Claude-launched `next dev` on :3123 — exactly the problem the app targets.
+
+## 2026-10-09 — UI, macOS/Linux providers, packaging and release pipeline (M3–M6, parallel agents)
+- Three agents in parallel on disjoint folders; integrated and reviewed in the main session.
+- UI (agent A): Projects grouped by repo with origin/orphan badges, Free RAM (orphans + top consumers),
+  Docker, Settings (language, interval, protected list), update banner; typed es/en i18n; native dialogs;
+  Playwright E2E kills a spawned server through the UI after verifying its PID. Screenshots use demo data.
+- Unix providers (agent B): Linux `/proc`, macOS ps/lsof + koffi libSystem, shared SIGTERM→SIGKILL kill;
+  verified on Linux in a node:24 container (unit + integration green); macOS is covered by CI only.
+- Packaging (agent C): whitelist files, NSIS one-click per-user, mac dmg+zip x64/arm64 ad-hoc signed,
+  AppImage+deb; packaged `--smoke` passes on Windows (koffi unpacked from asar automatically); release
+  workflow drafts → builds + smoke per OS → publishes as Latest; README and icon.
+- Main-session fixes: lockfile regenerated with a project `.npmrc` (D-012) — the global legacy-peer-deps
+  setting had made `npm ci` fail on clean machines; smoke mode skips the single-instance lock; renderer
+  minified (730 → 274 kB); versioned interpreters (`python3.12`, `php8.3`) count as dev runtimes; labels use
+  the process title when npm/next overwrite argv.
+
+## 2026-10-09 — Safety review fixes and full verification
+- Independent review of every kill path found two real issues, both fixed with regression tests:
+  - macOS: Electron helpers (`LocalKiller Helper (GPU)`...) are separate binaries, so exact-name self
+    protection missed them and "Close" on the LocalKiller consumer row could kill the app's own helpers.
+    `ProtectionPolicy` now supports `name*` prefixes; main protects `<exe>` and `<exe> helper*`.
+  - `pwsh -NoExit -Command <init>` (VS Code / Windows Terminal) was treated as a one-shot shell, making the
+    user's interactive terminal the root of a dev-server instance. `-NoExit` now disqualifies it.
+- Renderer tests migrated from a hand-written DOM harness to React Testing Library (peer now installed).
+- Verified: typecheck, eslint (0 errors), 137 unit, 2 integration (real OS), Playwright E2E (kills a
+  spawned server through the UI), `npm run release:check` (packaged exe `--smoke` → ok:true).

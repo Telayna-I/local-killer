@@ -35,3 +35,33 @@ AppImage/deb auto-update; macOS is unsigned for now, so it shows a manual downlo
 
 ## D-007 — Hand-rolled i18n
 Typed `es`/`en` dictionaries and a `useT()` hook. No i18next: two languages and a flat key set don't need it.
+
+## D-008 — Self-protection = launcher chain + own executable name
+LocalKiller never kills itself or whoever launched it (in dev: electron-vite, npm, the terminal, Claude).
+Its pid and living ancestors are protected by pid; Electron's helper processes by the app executable name.
+Alternative discarded: protecting the app's whole subtree — it would also protect processes a test or a
+parent legitimately spawned and wants killed.
+
+## D-009 — Packaging: whitelist files, ad-hoc mac signing, one-click per-user NSIS
+electron-builder `files` is a whitelist (`out/**`, `resources/**`); koffi's `.node` is unpacked from the asar
+automatically. macOS uses `identity: '-'` (ad-hoc) with hardened runtime off: without a Developer ID,
+library validation would reject Electron Framework and koffi.node, and arm64 needs at least ad-hoc signing.
+Windows NSIS one-click per-user (no admin prompt, auto-update friendly). Linux AppImage + deb (snap dropped).
+
+## D-010 — Release pipeline: draft first, packaged smoke test per OS, publish as Latest
+On a `v*` tag CI checks tag == package.json version, creates the draft once (avoids racing duplicate drafts),
+builds on windows/macos/ubuntu, runs the packaged app with `--smoke` before uploading, then publishes the
+release as Latest (electron-updater reads `/releases/latest`). macOS builds x64 + arm64 in one invocation
+with both koffi darwin packages installed so a single `latest-mac.yml` lists both.
+
+## D-011 — Unix providers: pure /proc on Linux, ps/lsof + libSystem (koffi) on macOS
+Linux reads everything from `/proc` (no spawning, no locale issues); names come from the `exe` link because
+Node 24 renames its main thread (`comm` reads `MainThread`). macOS uses `ps` with `LC_ALL=C TZ=UTC` (same
+parser for listing and identity checks, so start times compare equal), `lsof -F` for listeners, and koffi on
+libSystem for `proc_pidpath`, cwd (`proc_pidinfo`) and argv/env (`KERN_PROCARGS2`), falling back to ps/lsof.
+Kill: SIGTERM leaves-first → wait → SIGKILL, identity re-checked before each signal; never pid <= 1.
+
+## D-012 — Project `.npmrc` with `legacy-peer-deps=false`
+The developer's global `~/.npmrc` sets `legacy-peer-deps=true`, which produced a lockfile that `npm ci` rejects
+on clean machines (missing peers such as `@testing-library/dom`). The project file pins the default so the
+lockfile stays reproducible in CI regardless of the local machine.
