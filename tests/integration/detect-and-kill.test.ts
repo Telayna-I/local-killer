@@ -24,6 +24,22 @@ function cleanEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
   return { ...Object.fromEntries(inherited), ...extra }
 }
 
+/** Raw provider view of some processes and their parents, attached to assertion failures (CI). */
+async function describeProcesses(pids: (number | undefined)[]): Promise<string> {
+  const processes = await (await getProvider()).listProcesses()
+  const byPid = new Map(processes.map((p) => [p.pid, p]))
+  const rows = pids.flatMap((pid) => {
+    const self = pid === undefined ? undefined : byPid.get(pid)
+    const parent = self === undefined ? undefined : byPid.get(self.ppid)
+    return [self, parent].map((p) =>
+      p === undefined
+        ? 'missing'
+        : `${p.pid}<-${p.ppid} ${p.name} start=${p.startTimeMs} system=${p.isSystem}`
+    )
+  })
+  return `diagnostics: ${rows.join(' | ')}`
+}
+
 const samePath = (a: string | null, b: string): boolean =>
   process.platform === 'win32' ? a?.toLowerCase() === b.toLowerCase() : a === b
 
@@ -88,7 +104,11 @@ describe('detect and kill on the real OS', () => {
     const instance = await waitFor(async () =>
       (await snapshots.take()).instances.find((i: InstanceView) => i.ports.includes(port))
     )
-    expect(instance).toMatchObject({ kind: 'dev', origin: 'claude-code', isOrphan: false })
+    expect(instance, await describeProcesses([server.pid, process.pid])).toMatchObject({
+      kind: 'dev',
+      origin: 'claude-code',
+      isOrphan: false
+    })
     expect(samePath(instance.repoRoot, repo)).toBe(true)
     expect(instance.pids).toContain(server.pid)
 
